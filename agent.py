@@ -17,6 +17,7 @@ class Agent:
         self.initialize_policy_network()
         self.get_optimizer()
         self.done = False
+        self.collided = False
 
     def get_action(self, noise):
         if self.type == "h":

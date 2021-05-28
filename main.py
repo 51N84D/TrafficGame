@@ -4,7 +4,12 @@ from gridgame import GridGame
 
 def get_args():
     parser = argparse.ArgumentParser(description="grid-traffic-game")
-    parser.add_argument("--grid-dim", type=int, default=4)
+    parser.add_argument(
+        "--n-agents",
+        type=int,
+        default=1,
+        help="Number of agents on each side (i.e. total agents = n_agents * 2)",
+    )
     parser.add_argument("--noise-dim", type=int, default=16)
     parser.add_argument("--n-train-iter", type=int, default=1000)
     parser.add_argument("--n-save-iter", type=int, default=100)
@@ -21,7 +26,7 @@ if __name__ == "__main__":
     args = get_args()
 
     env = GridGame(
-        grid_dim=args.grid_dim,
+        n_agents_one_side=args.n_agents,
         noise_dim=args.noise_dim,
         save_dir=args.save_dir,
         load_dir=args.load_dir,
@@ -31,7 +36,8 @@ if __name__ == "__main__":
         resume=args.evaluate,
         lr=args.lr,
     )
+
     if args.evaluate:
-        env.test()
+       env.test()
     else:
-        env.train()
+       env.train()
