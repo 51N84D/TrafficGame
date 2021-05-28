@@ -129,8 +129,6 @@ class GridGame:
         noise = self.sample_noise()
         agent_stoch_actions, agent_actions = self.get_agent_actions(noise)
         collision_tracker = self.apply_agent_actions(agent_actions)
-        # self.move_agent_positions(agent_actions)
-        # self.set_grid(agent_actions=agent_actions)
         agent_payoffs = self.get_payoffs(agent_actions, agent_stoch_actions, collision_tracker)
         self.current_payoffs.append(agent_payoffs)
         if train:
@@ -204,12 +202,9 @@ class GridGame:
                 # Get movement direction
                 if agent.type == "v":  # vertical agent
                     passing_pos = (agent.position[0], agent.position[1] + 1)
-                    moving_pos = (agent.position[0], agent.position[1] + 2)
 
                 else:  # horizontal agent
                     passing_pos = (agent.position[0] + 1, agent.position[1])
-                    moving_pos = (agent.position[0] + 2, agent.position[1])
-
 
                 # Collision if two players pass over same point
                 if passing_grid[passing_pos[0], passing_pos[1]] > 1:
@@ -221,36 +216,17 @@ class GridGame:
                 # No collision
                 else:
                     # Agents move 2 squares at a time
-                    agent.position = moving_pos
+                    self.move_agent_position(agent)
 
         self.set_grid()
         return collision_tracker
 
-    def move_agent_positions(self, agent_actions):
+    def move_agent_position(self, agent):
         # Two passes to catch collisions
-        for i, agent in enumerate(self.agents):
-            if agent.done:
-                continue
-            action = agent_actions[i]
-            # Agents move 2 squares at a time
-            if action == 1:
-                if agent.type == "v":  # vertical agent
-                    agent.position = (agent.position[0], agent.position[1] + 2)
-                else:  # horizontal agent
-                    agent.position = (agent.position[0] + 2, agent.position[1])
-
-        for i, agent in enumerate(self.agents):
-            if agent.done:
-                continue
-            action = agent_actions[i]
-            # Agents move 2 squares at a time
-            if action == 1:
-                # Check for collisions
-                if agent.type == "v":  # vertical agent
-                    agent.position = (agent.position[0], agent.position[1] + 2)
-                else:  # horizontal agent
-                    agent.position = (agent.position[0] + 2, agent.position[1])
-        print("------------------------------------------------------")
+        if agent.type == "v":  # vertical agent
+            agent.position = (agent.position[0], agent.position[1] + 2)
+        else:  # horizontal agent
+            agent.position = (agent.position[0] + 2, agent.position[1])
 
     def get_payoffs(self, agent_actions, agent_stoch_actions, collision_tracker):
         # for each agent, get the current payoff
