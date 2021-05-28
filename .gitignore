@@ -1,0 +1,5 @@
+plots/
+saved_checkpoints/
+checkpoints/
+__pycache__/
+.comet.config

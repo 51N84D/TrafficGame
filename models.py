@@ -12,9 +12,9 @@ class MLP(nn.Module):
         normalize_output=True,
     ):
         super(MLP, self).__init__()
-        self.model = [nn.Linear(input_size, hidden_size), nn.ReLU()]
+        self.model = [nn.Linear(input_size, hidden_size), nn.Tanh()]
         for i in range(n_hidden_layers - 1):
-            self.model += [nn.Linear(hidden_size, hidden_size), nn.ReLU()]
+            self.model += [nn.Linear(hidden_size, hidden_size), nn.Tanh()]
         self.model += [nn.Linear(hidden_size, num_classes)]
         self.model = nn.Sequential(*self.model)
 
