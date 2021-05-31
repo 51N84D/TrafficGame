@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from matplotlib.pyplot import cm
 from tqdm import tqdm
 import pickle
+from celluloid import Camera
 
 
 class GridGame:
@@ -68,10 +69,14 @@ class GridGame:
         ).float()
         self.current_payoffs = []  # List of lists, length = number of steps
         self.average_payoffs = []  # List of lists, length = number of steps
+
+        # Plotting variables
         self.n_plot_iter = n_plot_iter
+        self.fig = plt.figure()
+        self.camera = Camera(self.fig)
+        self.prev_agent_positions = [None for i in range(self.n_agents)]
 
     def initialize_agents(self):
-        print("---------- Initializing agents --------------")
         agents = []
         for i in range(self.n_agents):
             if i < int(self.n_agents / 2):
@@ -88,9 +93,6 @@ class GridGame:
             agents.append(agent)
         self.agents = agents
         self.reset_agent_positions()
-        for i, agent in enumerate(self.agents):
-            print(f"agent {i} pos {agent.position}")
-        print("-----------------------------------------")
         return agents
 
     def reset_agent_positions(self):
@@ -103,12 +105,57 @@ class GridGame:
             agent.collided = False
             agent.done = False
 
-
     def clear_screen(self):
         os.system("clear")
 
-    def render(self):
+    def render(self, prev_state=None):
         # self.clear_screen()
+
+        # Plot lanes
+        print("grid size: ", self.grid_dim)
+        for i in range(self.grid_dim):
+            for j in range(self.grid_dim):
+                # For horizontal lines, i indexes vertical axis and j indexes horizontal axis
+                if j % 2 == 0:
+                    xmin = j
+                    xmax = j + 0.5
+                else:
+                    xmin = j + 0.5
+                    xmax = j + 1
+                    
+                plt.hlines(y=0.5 + i, xmin=xmin, xmax=xmax, color="b", linestyle="-")
+                plt.vlines(x=0.5 + i, ymin=xmin, ymax=xmax, color="b", linestyle="-")
+
+                # plt.vlines(x=0.5 + i, ymin=j, ymax=j + 0.5, color="b", linestyle="-")
+
+        for i, agent in enumerate(self.agents):
+            if agent.type == "h":
+                color = "blue"
+            else:
+                color = "red"
+
+            if agent.collided:
+                plt.scatter(
+                    x=agent.position[0], y=agent.position[1], c="black", marker="x"
+                )
+            else:
+                plt.scatter(x=agent.position[0], y=agent.position[1], c=color)
+
+            # Draw a line from prev position to current position
+            if self.prev_agent_positions[i] is not None:
+                plt.plot(
+                    [self.prev_agent_positions[i][0], agent.position[0]],
+                    [self.prev_agent_positions[i][1], agent.position[1]],
+                    c=color,
+                )
+            self.prev_agent_positions[i] = agent.position
+        plt.ylim(0, self.grid_dim - 1)
+        plt.xlim(0, self.grid_dim - 1)
+        plt.axis('off')
+
+        self.camera.snap()
+
+        """
         print("------------------------------------------------------------")
         for y_idx, row in enumerate(self.grid):
             for x_idx, col in enumerate(row):
@@ -123,13 +170,16 @@ class GridGame:
                     print("-", end="\t")
             print("\n")
         print("------------------------------------------------------------")
+        """
 
     def step(self, train=True):
         self.reset_grid()
         noise = self.sample_noise()
         agent_stoch_actions, agent_actions = self.get_agent_actions(noise)
         collision_tracker = self.apply_agent_actions(agent_actions)
-        agent_payoffs = self.get_payoffs(agent_actions, agent_stoch_actions, collision_tracker)
+        agent_payoffs = self.get_payoffs(
+            agent_actions, agent_stoch_actions, collision_tracker
+        )
         self.current_payoffs.append(agent_payoffs)
         if train:
             self.update_agent_weights(agent_payoffs)
@@ -209,6 +259,7 @@ class GridGame:
                 # Collision if two players pass over same point
                 if passing_grid[passing_pos[0], passing_pos[1]] > 1:
                     agent.collided = True
+                    agent.position = (passing_pos[0], passing_pos[1])
                     self.grid[passing_pos[0], passing_pos[1]] -= 1
                     colliding_agents = passing_tracker[passing_pos].copy()
                     colliding_agents.remove(agent.name)
@@ -277,12 +328,16 @@ class GridGame:
         self.reset_agent_positions()
         if display:
             self.render()
-            time.sleep(0.5)
         for i in range(self.n_agents):
             self.step(train=train)
             if display:
                 self.render()
-                time.sleep(0.5)
+
+        if display:
+            animation = self.camera.animate()
+            if os.path.isfile("animation.mov"):
+                os.remove("animation.mov")  # Opt.: os.system("rm "+strFile)
+            animation.save("animation.mov")
 
     def train(self):
         for i in tqdm(range(self.n_train_iter)):
@@ -303,7 +358,7 @@ class GridGame:
 
     def plot_payoffs(self):
         self.average_payoffs = np.asarray(self.average_payoffs)
-        print('average_payoffs: ', self.average_payoffs.shape)
+        print("average_payoffs: ", self.average_payoffs.shape)
         color = iter(cm.rainbow(np.linspace(0, 1, self.n_agents)))
         for i in range(self.n_agents):
             c = next(color)
